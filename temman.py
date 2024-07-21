@@ -195,9 +195,6 @@ def __copy_dir_rec(inp_master_dir: str,
                 shutil.copyfile(entry.path, new_path, follow_symlinks = False)
             elif entry.is_symlink():
                 abs_target = os.path.realpath(entry.path)
-                print(abs_target)
-                print(inp_master_dir)
-                print(os.path.realpath(inp_master_dir))
                 if abs_target.startswith(os.path.realpath(inp_master_dir)):
                     # The symbolic link links to within the template.
                     # We need to rename the target.
@@ -215,18 +212,6 @@ def __copy_dir_rec(inp_master_dir: str,
                                 note="Symlink with old target:\n\t"
                                 + abs_target + "\nAnd new target:\n\t"
                                 + new_target)
-                # print(
-                #     f"Input: link {entry.path} with dest "
-                #     + f"{os.path.realpath(entry)}")
-                # print(f"Output: symlink {new_path} with dest {new_target}")
-                os.symlink(src=new_target,
-                           dst=new_path,
-                           target_is_directory=entry.is_dir())
-                # if entry.is_file():
-                #     shutil.copyfile(entry.path, new_path, follow_symlinks =
-                #                     False)
-                # print(f"Warning: ignoring symbolic link {entry.path}")
-
 
 def change_prefix(old_prefix: str, new_prefix: str, name: str) -> str:
     """
@@ -239,15 +224,6 @@ def change_prefix(old_prefix: str, new_prefix: str, name: str) -> str:
         return new_prefix + name[len(old_prefix):]
     else:
         return name
-
-# def change_hidden_to_dot_prefix(name: str) -> str:
-#     """
-#     Replace a string starting with "."
-#     to the same string but with this "."
-#     prefix replaced by "DOT_".
-#     """
-#     assert name.startswith(".").
-#     return "DOT_" + name[1:]
 
 def print_copy_file(inp: str, outp: str, note : None | str):
     msg = ""
@@ -263,9 +239,4 @@ def print_copy_file(inp: str, outp: str, note : None | str):
     print(msg)
 
 if __name__ == "__main__":
-    copy_dir(
-        "/home/nifrec/code/nifrec_projects/temman/test",
-        "/home/nifrec/code/nifrec_projects/temman/test_out",
-        True)
-    # main()
-    # main(sys.argv[1:]) # Discard the first element, it's the filename.
+    main()
