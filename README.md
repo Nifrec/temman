@@ -115,7 +115,11 @@ Pushing will rename files starting with a `.` to `DOT_`.
 * If you decide to change the local part of the template,
     then Temman cannot synchronise (via `temman pull`) 
     this back to existing projects.
-* Temman ignores symbolic links.
+* Temman copies symbolic links as follows:
+    - If the target is outside the template, then the copy
+        of the symbolic link has an absolute path to the same target.
+    - If the target is another file in the directory,
+        then the copy of the symbolic link targets the new copy of that file.
 
 ## Ideas for improvements
 * Make Temman use git to implement more careful

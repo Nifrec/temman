@@ -46,6 +46,10 @@ TEMPLATE_SUPERDIR = "/home/nifrec/system/latex/templates"
 
 DOTS_LONG = "DOT_"
 
+# Maximum number of characters in a printed path.
+# For longer paths, the suffix will be removed.
+MAX_PATH_PRINT_LEN = 50
+
 """TODO:
     Implement new copying and DOT_ renaming.
     Implement hidden file.
@@ -166,7 +170,7 @@ def __copy_dir_rec(inp_master_dir: str,
                    lengthen_dots: bool):
     assert os.path.exists(input_dir)
     if not os.path.exists(output_dir):
-        print(f"Making directory {output_dir}")
+        print(f"Making directory:\n\t{output_dir}\n")
         os.makedirs(output_dir)
 
     if lengthen_dots:
@@ -181,21 +185,25 @@ def __copy_dir_rec(inp_master_dir: str,
             new_name = change_prefix(old_prefix, new_prefix, entry.name)
             new_path = os.path.join(output_dir, new_name)
             if entry.is_dir() and not entry.is_symlink():
-                print(f"Input:{entry.path}, create: {new_path}")
+                print(f"New directory. Input dir: \n\t{entry.path}")
                 __copy_dir_rec(inp_master_dir,
                                entry.path, output_master_dir,
                                new_path, lengthen_dots)
             elif entry.is_file() and not entry.is_symlink():
-                print(f"Input: {entry.path}, create file: {new_path}")
+                print_copy_file(inp=entry.path, outp=new_path, 
+                                note="Regular file")
                 shutil.copyfile(entry.path, new_path, follow_symlinks = False)
             elif entry.is_symlink():
                 abs_target = os.path.realpath(entry.path)
-                if os.path.commonpath([inp_master_dir, abs_target]) == inp_master_dir:
+                print(abs_target)
+                print(inp_master_dir)
+                print(os.path.realpath(inp_master_dir))
+                if abs_target.startswith(os.path.realpath(inp_master_dir)):
                     # The symbolic link links to within the template.
                     # We need to rename the target.
                     new_subpath = []
                     head = abs_target
-                    while head != inp_master_dir:
+                    while head != os.path.realpath(inp_master_dir):
                         (head, tail) = os.path.split(head)
                         new_subpath.append(
                             change_prefix(old_prefix, new_prefix, tail))
@@ -203,12 +211,16 @@ def __copy_dir_rec(inp_master_dir: str,
                     new_target = os.path.join(output_master_dir, new_target)
                 else:
                     new_target = abs_target
-                print(
-                    f"Input: link {entry.path} with dest "
-                    + f"{os.path.realpath(entry)}")
-                print(f"Output: symlink {new_path} with dest {new_target}")
-                os.symlink(src=new_path,
-                           dst=new_target,
+                print_copy_file(inp=entry.path, outp=new_path, 
+                                note="Symlink with old target:\n\t"
+                                + abs_target + "\nAnd new target:\n\t"
+                                + new_target)
+                # print(
+                #     f"Input: link {entry.path} with dest "
+                #     + f"{os.path.realpath(entry)}")
+                # print(f"Output: symlink {new_path} with dest {new_target}")
+                os.symlink(src=new_target,
+                           dst=new_path,
                            target_is_directory=entry.is_dir())
                 # if entry.is_file():
                 #     shutil.copyfile(entry.path, new_path, follow_symlinks =
@@ -237,10 +249,23 @@ def change_prefix(old_prefix: str, new_prefix: str, name: str) -> str:
 #     assert name.startswith(".").
 #     return "DOT_" + name[1:]
 
+def print_copy_file(inp: str, outp: str, note : None | str):
+    msg = ""
+    if note is not None:
+        msg = note + "\n"
+    msg += "Original:\n\t"
+    if len(inp) > MAX_PATH_PRINT_LEN:
+        msg += "..." + inp[(-MAX_PATH_PRINT_LEN - 3):]
+    msg += "\nNew copy:\n\t"
+    if len(outp) > MAX_PATH_PRINT_LEN:
+        msg += "..." + outp[(-MAX_PATH_PRINT_LEN + 3):]
+    msg += "\n"
+    print(msg)
+
 if __name__ == "__main__":
     copy_dir(
-        "/home/nifrec/vault/Documents/synced_system/luni_system/latex/test",
-        "/home/nifrec/vault/Documents/synced_system/luni_system/latex/test_out",
+        "/home/nifrec/code/nifrec_projects/temman/test",
+        "/home/nifrec/code/nifrec_projects/temman/test_out",
         True)
     # main()
     # main(sys.argv[1:]) # Discard the first element, it's the filename.
