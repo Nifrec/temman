@@ -125,7 +125,6 @@ Pushing will rename files starting with a `.` to `DOT_`.
 * Make Temman use git to implement more careful
     variants of its `push` and `pull` actions,
     that can also pull changes to the local part of a template.
-* Come up with a better behaviour for dealing with symbolic links.
-    Currently I am a bit in doubt what the best policy should be.
-    The main pain are symlinks with a destination within
-    the template.
+* Make symbolic links to within the template use relative paths
+    instead. This allows to move a project to another location
+    on disk without breaking all the symbolic links.
