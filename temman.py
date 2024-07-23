@@ -252,9 +252,6 @@ def copy_dir(input_dir: str,
     of the form `DOT_foo` will be changed to `.foo`.
 
     This function will probably loop if circular links exist.
-
-    This function ignores files whose name
-    are `CACHE_FILENAME`.
     """
     __copy_dir_rec(input_dir, input_dir, output_dir, output_dir, lengthen_dots)
 
@@ -284,9 +281,7 @@ def __copy_dir_rec(inp_master_dir: str,
                 __copy_dir_rec(inp_master_dir,
                                entry.path, output_master_dir,
                                new_path, lengthen_dots)
-            elif (entry.is_file() 
-                  and not entry.is_symlink()
-                  and not entry.name == CACHE_FILENAME):
+            elif entry.is_file() and not entry.is_symlink():
                 print_copy_file(inp=entry.path, outp=new_path, 
                                 note="Regular file")
                 shutil.copyfile(entry.path, new_path, follow_symlinks = False)
