@@ -94,15 +94,25 @@ def build_parser(template_dirs: dict[str, str]) -> argparse.ArgumentParser:
                             )
     parser_new.set_defaults(cmd="new")
 
-    parser_push = subparses.add_parser("push", 
-                                      help="update globaltemplate in existing "
-                                      + "project")
-    parser_push.add_argument("-d", action="store", 
+    parser_pull = subparses.add_parser(
+            "pull", help="update globaltemplate in am existing project")
+    parser_pull.add_argument("-d", action="store", 
                             help="root directory of target project."
                             + "\nDefault: current working directory",
                             default=os.getcwd()
                             )
+    parser_pull.set_defaults(cmd="pull")
+
+    parser_push = subparses.add_parser(
+            "push", help="update globaltemplate in template collection based"
+                         + "on globaltemplate in local project")
+    parser_push.add_argument("-d", action="store", 
+                            help="root directory of local project."
+                            + "\nDefault: current working directory",
+                            default=os.getcwd()
+                            )
     parser_push.set_defaults(cmd="push")
+
     return parser
 
 
@@ -120,9 +130,9 @@ def parse_arguments(parser: argparse.ArgumentParser,
     elif parse.cmd == "new":
         exec_subcommand_new(parsed_args, template_dirs)
     elif parse.cmd == "push":
-        exec_subcommand_push(parsed_args, template_dirs)
+        exec_subcommand_pull_push(parsed_args, template_dirs, push=True)
     elif parse.cmd == "pull":
-        raise NotImplementedError("TODO")
+        exec_subcommand_pull_push(parsed_args, template_dirs, push=False)
     else:
         parser.print_help()
 
@@ -161,8 +171,17 @@ def exec_subcommand_new(parsed_args: dict[str, Any],
                       template_dir,
                       new_proj_dir)
 
-def exec_subcommand_push(parsed_args: dict[str, Any],
-                        template_dirs: dict[str, str]):
+def exec_subcommand_pull_push(parsed_args: dict[str, Any],
+                              template_dirs: dict[str, str],
+                              push: bool):
+    """
+    If `push` is `False`, then remove the `globaltemplate`
+    in the local project and replace it with a fresh
+    copy from the corresponding template in the template collection.
+    If `push` is `True` instead, remove the `globaltemplate`
+    in the corresponding template in the collection
+    and replace it with the `globaltemplate` of the local project.
+    """
     project_dir = parsed_args["d"]
     cache = load_cache(parsed_args["d"])
     template = cache[CACHE_KEY_TEMPLATE]
@@ -182,14 +201,55 @@ def exec_subcommand_push(parsed_args: dict[str, Any],
     if SYNCHED_DIR_NAME not in os.listdir(project_dir):
         print("Current project has no `globaltemplate` directory:\n"
               + "nothing to synchronise.")
-    source_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
-    target_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
-    confirm_msg = (f"Override the content of\n\t{source_dir}\n"
-        + f"with\n\t{target_dir}\n?")
+    if push:
+        source_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
+        target_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
+        spell_out_dots = True
+    else:
+        source_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
+        target_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
+        spell_out_dots = False
+
+    confirm_msg = (f"Override the content of\n\t{target_dir}\n"
+        + f"with\n\t{source_dir}\n?")
     get_confirmation(confirm_msg)
-    print(f"Removing\n\t{target_dir}\n")
-    shutil.rmtree(target_dir)
-    copy_dir(source_dir, target_dir, True)
+    if not os.path.exists(target_dir):
+        warnings.warn("The `globaltemplate` of the target does not exist.")
+    else:
+        print(f"Removing\n\t{target_dir}\n")
+        shutil.rmtree(target_dir)
+    
+    copy_dir(source_dir, target_dir, spell_out_dots)
+
+# def exec_subcommand_push(parsed_args: dict[str, Any],
+#                         template_dirs: dict[str, str]):
+#     project_dir = parsed_args["d"]
+#     cache = load_cache(parsed_args["d"])
+#     template = cache[CACHE_KEY_TEMPLATE]
+#     template_dir = cache[CACHE_KEY_TEMPLATE_DIR]
+
+#     if template not in template_dirs.keys():
+#         warnings.warn(
+#             f"Misconfiguration: cached template name '{template}'\n"
+#             + "does not occur in configured templates",
+#             RuntimeWarning)
+#     if template_dir != template_dirs[template]:
+#         warnings.warn(
+#             f"Misconfiguration: cached template's directory"
+#             + f"\t{template_dir}\n"
+#             + "does not match the directory in the configured templated",
+#             RuntimeWarning)
+#     if SYNCHED_DIR_NAME not in os.listdir(project_dir):
+#         print("Current project has no `globaltemplate` directory:\n"
+#               + "nothing to synchronise.")
+#     source_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
+#     target_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
+#     confirm_msg = (f"Override the content of\n\t{source_dir}\n"
+#         + f"with\n\t{target_dir}\n?")
+#     get_confirmation(confirm_msg)
+#     print(f"Removing\n\t{target_dir}\n")
+#     shutil.rmtree(target_dir)
+#     copy_dir(source_dir, target_dir, True)
 
 def create_json_cache(template_name: str,
                     template_dir: str,
@@ -300,10 +360,12 @@ def __copy_dir_rec(inp_master_dir: str,
                     new_target = os.path.join(output_master_dir, new_target)
                 else:
                     new_target = abs_target
-                print_copy_file(inp=entry.path, outp=new_path, 
+                    print_copy_file(inp=entry.path, outp=new_path, 
                                 note="Symlink with old target:\n\t"
                                 + abs_target + "\nAnd new target:\n\t"
                                 + new_target)
+                os.symlink(src=new_target, dst=new_path,
+                           target_is_directory=entry.is_dir())
 
 def change_prefix(old_prefix: str, new_prefix: str, name: str) -> str:
     """
@@ -330,7 +392,7 @@ def print_copy_file(inp: str, outp: str, note : None | str):
     if len(outp) > MAX_PATH_PRINT_LEN:
         msg += "..." + outp[(-MAX_PATH_PRINT_LEN - 3):]
     else:
-        msg += inp
+        msg += outp
     msg += "\n"
     print(msg)
 
