@@ -40,12 +40,15 @@ import sys
 import os
 import shutil
 import json
+import warnings
 
 # Directory containing the templates,
 # which are each a subdirectory of the following:
 TEMPLATE_SUPERDIR = "/home/nifrec/system/latex/templates"
 
 DOTS_LONG = "DOT_"
+
+SYNCHED_DIR_NAME = "globaltemplate"
 
 # Maximum number of characters in a printed path.
 # For longer paths, the suffix will be removed.
@@ -89,21 +92,37 @@ def build_parser(template_dirs: dict[str, str]) -> argparse.ArgumentParser:
                             + "\nDefault: current working directory",
                             default=os.getcwd()
                             )
+    parser_new.set_defaults(cmd="new")
+
+    parser_push = subparses.add_parser("push", 
+                                      help="update globaltemplate in existing "
+                                      + "project")
+    parser_push.add_argument("-d", action="store", 
+                            help="root directory of target project."
+                            + "\nDefault: current working directory",
+                            default=os.getcwd()
+                            )
+    parser_push.set_defaults(cmd="push")
     return parser
 
 
 def parse_arguments(parser: argparse.ArgumentParser,
                     template_dirs: dict[str, str]
                     ) -> None:
-    parsed_args = vars(parser.parse_args())
+    parse = parser.parse_args()
+    parsed_args = vars(parse)
     if parsed_args["l"]:
         print("Available templates:")
         for name in template_dirs.keys():
             print(f"* {name}")
     # The user selected the subcommand 'new':
-    elif "template" in parsed_args.keys(): 
+    # elif "template" in parsed_args.keys(): 
+    elif parse.cmd == "new":
         exec_subcommand_new(parsed_args, template_dirs)
-
+    elif parse.cmd == "push":
+        exec_subcommand_push(parsed_args, template_dirs)
+    elif parse.cmd == "pull":
+        raise NotImplementedError("TODO")
     else:
         parser.print_help()
 
@@ -142,6 +161,36 @@ def exec_subcommand_new(parsed_args: dict[str, Any],
                       template_dir,
                       new_proj_dir)
 
+def exec_subcommand_push(parsed_args: dict[str, Any],
+                        template_dirs: dict[str, str]):
+    project_dir = parsed_args["d"]
+    cache = load_cache(parsed_args["d"])
+    template = cache[CACHE_KEY_TEMPLATE]
+    template_dir = cache[CACHE_KEY_TEMPLATE_DIR]
+
+    if template not in template_dirs.keys():
+        warnings.warn(
+            f"Misconfiguration: cached template name '{template}'\n"
+            + "does not occur in configured templates",
+            RuntimeWarning)
+    if template_dir != template_dirs[template]:
+        warnings.warn(
+            f"Misconfiguration: cached template's directory"
+            + f"\t{template_dir}\n"
+            + "does not match the directory in the configured templated",
+            RuntimeWarning)
+    if SYNCHED_DIR_NAME not in os.listdir(project_dir):
+        print("Current project has no `globaltemplate` directory:\n"
+              + "nothing to synchronise.")
+    source_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
+    target_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
+    confirm_msg = (f"Override the content of\n\t{source_dir}\n"
+        + f"with\n\t{target_dir}\n?")
+    get_confirmation(confirm_msg)
+    print(f"Removing\n\t{target_dir}\n")
+    shutil.rmtree(target_dir)
+    copy_dir(source_dir, target_dir, True)
+
 def create_json_cache(template_name: str,
                     template_dir: str,
                     location: str):
@@ -157,6 +206,19 @@ def create_json_cache(template_name: str,
     print("Creating cache file:\n\t" + filepath)
     with open(filepath, "w") as fp:
         json.dump(cache, fp)
+
+def load_cache(location: str) -> dict[str, str]:
+    """
+    Load a Temman cache file from a project created
+    with `Temman new` with as root directory `location`.
+    """
+    filepath = os.path.join(location, CACHE_FILENAME)
+    if not os.path.exists(filepath):
+        raise RuntimeError(f"Temman cache file\t\n{filepath}\nnot found."
+                           " Are you sure that\t\n{location}\n"
+                           "is a project created with `temman new`?")
+    with open(filepath, "r") as fp:
+        return json.load(fp)
     
 def get_confirmation(message: str):
     """
