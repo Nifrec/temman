@@ -39,6 +39,7 @@ import argparse
 import sys
 import os
 import shutil
+import json
 
 # Directory containing the templates,
 # which are each a subdirectory of the following:
@@ -49,6 +50,8 @@ DOTS_LONG = "DOT_"
 # Maximum number of characters in a printed path.
 # For longer paths, the suffix will be removed.
 MAX_PATH_PRINT_LEN = 50
+
+CACHE_FILENAME = ".temman.json"
 
 """TODO:
     Implement new copying and DOT_ renaming.
@@ -76,10 +79,10 @@ def build_parser(template_dirs: dict[str, str]) -> argparse.ArgumentParser:
     parser_new.add_argument("-n", type=str, 
                             action="store",
                             help=("name for new project directory."
-                            + "Default: name of template"))
+                            + "\nDefault: name of template"))
     parser_new.add_argument("-d", action="store", 
                             help="directory to create new project in."
-                            + "Default: current working directory",
+                            + "\nDefault: current working directory",
                             default=os.getcwd()
                             )
     return parser
@@ -127,6 +130,16 @@ def exec_subcommand_new(parsed_args: dict[str, Any],
     new_proj_dir = os.path.join(new_proj_superdir, new_proj_name)
     message = f"About to create a project in:\n{new_proj_dir}\nContinue?"
     get_confirmation(message)
+
+    template_dir = template_dirs[parsed_args["template"]]
+    copy_dir(template_dir, new_proj_dir, False)
+
+    # cache : dict[str, str] = {
+    #         "template": parsed_args["template"],
+    #         "template_dir": template_dir
+    #         } 
+    # with open(os.path.join(new_proj_dir, CACHE_FILENAME), "w+") as fp:
+    #     json.dump(cache, fp)
     
 def get_confirmation(message: str):
     """
@@ -232,9 +245,13 @@ def print_copy_file(inp: str, outp: str, note : None | str):
     msg += "Original:\n\t"
     if len(inp) > MAX_PATH_PRINT_LEN:
         msg += "..." + inp[(-MAX_PATH_PRINT_LEN - 3):]
+    else:
+        msg += inp
     msg += "\nNew copy:\n\t"
     if len(outp) > MAX_PATH_PRINT_LEN:
-        msg += "..." + outp[(-MAX_PATH_PRINT_LEN + 3):]
+        msg += "..." + outp[(-MAX_PATH_PRINT_LEN - 3):]
+    else:
+        msg += inp
     msg += "\n"
     print(msg)
 
