@@ -52,6 +52,10 @@ DOTS_LONG = "DOT_"
 MAX_PATH_PRINT_LEN = 50
 
 CACHE_FILENAME = ".temman.json"
+# JSON field for the name of a template.
+CACHE_KEY_TEMPLATE = "template"
+# JSON field for the directory a template is stored in.
+CACHE_KEY_TEMPLATE_DIR = "template_dir"
 
 """TODO:
     Implement new copying and DOT_ renaming.
@@ -134,12 +138,25 @@ def exec_subcommand_new(parsed_args: dict[str, Any],
     template_dir = template_dirs[parsed_args["template"]]
     copy_dir(template_dir, new_proj_dir, False)
 
-    # cache : dict[str, str] = {
-    #         "template": parsed_args["template"],
-    #         "template_dir": template_dir
-    #         } 
-    # with open(os.path.join(new_proj_dir, CACHE_FILENAME), "w+") as fp:
-    #     json.dump(cache, fp)
+    create_json_cache(parsed_args["template"],
+                      template_dir,
+                      new_proj_dir)
+
+def create_json_cache(template_name: str,
+                    template_dir: str,
+                    location: str):
+    """
+    Create a new JSON file (with name `CACHE_FILENAME`)
+    in `location` with the given values for fields.
+    """
+    cache : dict[str, str] = {
+            CACHE_KEY_TEMPLATE : template_name,
+            CACHE_KEY_TEMPLATE_DIR : template_dir
+            } 
+    filepath = os.path.join(location, CACHE_FILENAME)
+    print("Creating cache file:\n\t" + filepath)
+    with open(filepath, "w") as fp:
+        json.dump(cache, fp)
     
 def get_confirmation(message: str):
     """
@@ -173,6 +190,9 @@ def copy_dir(input_dir: str,
     of the form `DOT_foo` will be changed to `.foo`.
 
     This function will probably loop if circular links exist.
+
+    This function ignores files whose name
+    are `CACHE_FILENAME`.
     """
     __copy_dir_rec(input_dir, input_dir, output_dir, output_dir, lengthen_dots)
 
@@ -202,7 +222,9 @@ def __copy_dir_rec(inp_master_dir: str,
                 __copy_dir_rec(inp_master_dir,
                                entry.path, output_master_dir,
                                new_path, lengthen_dots)
-            elif entry.is_file() and not entry.is_symlink():
+            elif (entry.is_file() 
+                  and not entry.is_symlink()
+                  and not entry.name == CACHE_FILENAME):
                 print_copy_file(inp=entry.path, outp=new_path, 
                                 note="Regular file")
                 shutil.copyfile(entry.path, new_path, follow_symlinks = False)
