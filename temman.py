@@ -1,8 +1,8 @@
 #!/bin/python3
 """
-This file if part of 'niflatex',
-Nifrec's (Lulof Pirée)'s small tool for organising 
-personal LaTeX templates.
+This file if part of 'temman',
+a small tool for organising personal plaintext templates
+(in particular for LaTeX projects).
 
 --------------------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 --------------------------------------------------------------------------------
 *File content:*
 
-Interactive commands for 
+Commandline commands for 
 (1) making a new project based on a given template.
 (2) updating the local copy of a template by pulling changes
     made to the template.
@@ -36,7 +36,6 @@ Interactive commands for
 from __future__ import annotations
 from typing import Any
 import argparse
-import sys
 import os
 import shutil
 import json
@@ -59,14 +58,6 @@ CACHE_FILENAME = ".temman.json"
 CACHE_KEY_TEMPLATE = "template"
 # JSON field for the directory a template is stored in.
 CACHE_KEY_TEMPLATE_DIR = "template_dir"
-
-"""TODO:
-    Implement new copying and DOT_ renaming.
-    Implement hidden file.
-    Rename this file.
-    Implement push and pull.
-    Actually make useful templates, test and debug.
-"""
 
 def main(template_dir: str = TEMPLATE_SUPERDIR):
     template_dirs = get_template_dirs(template_dir)
@@ -126,7 +117,6 @@ def parse_arguments(parser: argparse.ArgumentParser,
         for name in template_dirs.keys():
             print(f"* {name}")
     # The user selected the subcommand 'new':
-    # elif "template" in parsed_args.keys(): 
     elif parse.cmd == "new":
         exec_subcommand_new(parsed_args, template_dirs)
     elif parse.cmd == "push":
@@ -156,7 +146,7 @@ def exec_subcommand_new(parsed_args: dict[str, Any],
             parsed_args["template"] in template_dirs.keys(), \
             "Bug: exec_subcommand_new received non-existing template."
     new_proj_superdir = parsed_args["d"]
-    if "n" in parsed_args.keys():
+    if parsed_args["n"] is not None:
         new_proj_name = parsed_args["n"]
     else:
         new_proj_name = parsed_args["template"]
@@ -220,36 +210,6 @@ def exec_subcommand_pull_push(parsed_args: dict[str, Any],
         shutil.rmtree(target_dir)
     
     copy_dir(source_dir, target_dir, spell_out_dots)
-
-# def exec_subcommand_push(parsed_args: dict[str, Any],
-#                         template_dirs: dict[str, str]):
-#     project_dir = parsed_args["d"]
-#     cache = load_cache(parsed_args["d"])
-#     template = cache[CACHE_KEY_TEMPLATE]
-#     template_dir = cache[CACHE_KEY_TEMPLATE_DIR]
-
-#     if template not in template_dirs.keys():
-#         warnings.warn(
-#             f"Misconfiguration: cached template name '{template}'\n"
-#             + "does not occur in configured templates",
-#             RuntimeWarning)
-#     if template_dir != template_dirs[template]:
-#         warnings.warn(
-#             f"Misconfiguration: cached template's directory"
-#             + f"\t{template_dir}\n"
-#             + "does not match the directory in the configured templated",
-#             RuntimeWarning)
-#     if SYNCHED_DIR_NAME not in os.listdir(project_dir):
-#         print("Current project has no `globaltemplate` directory:\n"
-#               + "nothing to synchronise.")
-#     source_dir = os.path.join(project_dir, SYNCHED_DIR_NAME)
-#     target_dir = os.path.join(template_dir, SYNCHED_DIR_NAME)
-#     confirm_msg = (f"Override the content of\n\t{source_dir}\n"
-#         + f"with\n\t{target_dir}\n?")
-#     get_confirmation(confirm_msg)
-#     print(f"Removing\n\t{target_dir}\n")
-#     shutil.rmtree(target_dir)
-#     copy_dir(source_dir, target_dir, True)
 
 def create_json_cache(template_name: str,
                     template_dir: str,
