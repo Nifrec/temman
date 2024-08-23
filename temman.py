@@ -43,7 +43,7 @@ import warnings
 
 # Directory containing the templates,
 # which are each a subdirectory of the following:
-TEMPLATE_SUPERDIR = "/home/nifrec/system/latex/templates"
+TEMPLATE_SUPERDIR = "/home/nifrec/system/templates"
 
 DOTS_LONG = "DOT_"
 
