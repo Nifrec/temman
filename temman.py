@@ -43,7 +43,7 @@ import warnings
 
 # Directory containing the templates,
 # which are each a subdirectory of the following:
-TEMPLATE_SUPERDIR = "/home/nifrec/system/templates"
+TEMPLATE_SUPERDIR = "/home/nifrec/system/templates/templates"
 
 DOTS_LONG = "DOT_"
 
@@ -116,6 +116,9 @@ def parse_arguments(parser: argparse.ArgumentParser,
         print("Available templates:")
         for name in template_dirs.keys():
             print(f"* {name}")
+    elif "cmd" not in dir(parse):
+        print("Command not recognised. Here is the help of `temman`:")
+        parser.print_help()
     # The user selected the subcommand 'new':
     elif parse.cmd == "new":
         exec_subcommand_new(parsed_args, template_dirs)
