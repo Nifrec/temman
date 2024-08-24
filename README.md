@@ -102,6 +102,9 @@ Every project should contain a subdirectory named `globaltemplate`
 that will be synchronised via `temman push` and `temman pull`.
 Pushing will rename files starting with a `.` to `DOT_`.
 
+See [my LaTeX templates](https://github.com/Nifrec/templates.git)
+for an example of a template collection.
+
 ## Tips and warnings
 * The included templates are my favourite LaTeX templates.
     I always compile LaTeX with `--output-directory=output`,
@@ -122,6 +125,8 @@ Pushing will rename files starting with a `.` to `DOT_`.
         then the copy of the symbolic link targets the new copy of that file.
 
 ## Ideas for improvements
+More advanced successors of Temman could consider the following improvements
+(these are currently *not* scheduled to be implemented in Temman):
 * Make Temman use git to implement more careful
     variants of its `push` and `pull` actions,
     that can also pull changes to the local part of a template.
